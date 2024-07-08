@@ -4,6 +4,7 @@ gradlew
 gradlew.bat
 *.properties
 build/
+*.yml
 
 gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
