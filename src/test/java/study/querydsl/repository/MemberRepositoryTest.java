@@ -94,4 +94,102 @@ class MemberRepositoryTest {
         assertThat(result.getSize()).isEqualTo(3);
         assertThat(result.getContent()).extracting("username").containsExactly("member1", "member2", "member3");
     }
+
+    @DisplayName("카운트 쿼리 실행 됨")
+    @Test
+    public void searchPageComplex1() {
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 20, teamA);
+
+        Member member3 = new Member("member3", 30, teamB);
+        Member member4 = new Member("member4", 40, teamB);
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+
+        MemberSearchCondition condition = new MemberSearchCondition();
+        PageRequest pageRequest = PageRequest.of(0, 4);
+
+        Page<MemberTeamDto> result = memberRepository.searchComplex(condition, pageRequest);
+
+        assertThat(result.getSize()).isEqualTo(4);
+    }
+
+    @DisplayName("카운트 쿼리 실행 안됨")
+    @Test
+    public void searchPageComplex2() {
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 20, teamA);
+
+        Member member3 = new Member("member3", 30, teamB);
+        Member member4 = new Member("member4", 40, teamB);
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+
+        MemberSearchCondition condition = new MemberSearchCondition();
+        PageRequest pageRequest = PageRequest.of(0, 5);
+
+        Page<MemberTeamDto> result = memberRepository.searchComplex(condition, pageRequest);
+
+        assertThat(result.getSize()).isEqualTo(5);
+    }
+
+    @DisplayName("페이지네이션 테스트")
+    @Test
+    public void searchPageComplex3() {
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        em.persist(teamA);
+        em.persist(teamB);
+
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 20, teamA);
+
+        Member member3 = new Member("member3", 30, teamB);
+        Member member4 = new Member("member4", 40, teamB);
+
+        Member member5 = new Member("member5", 10, teamA);
+        Member member6 = new Member("member6", 20, teamA);
+
+        Member member7 = new Member("member7", 30, teamB);
+        Member member8 = new Member("member8", 40, teamB);
+
+        Member member9 = new Member("member9", 30, teamB);
+        Member member10 = new Member("member10", 40, teamB);
+
+        em.persist(member1);
+        em.persist(member2);
+        em.persist(member3);
+        em.persist(member4);
+        em.persist(member5);
+        em.persist(member6);
+        em.persist(member7);
+        em.persist(member8);
+        em.persist(member9);
+        em.persist(member10);
+
+        MemberSearchCondition condition = new MemberSearchCondition();
+        PageRequest pageRequest = PageRequest.of(3, 3);
+
+        Page<MemberTeamDto> result = memberRepository.searchComplex(condition, pageRequest);
+
+        assertThat(result.getSize()).isEqualTo(3); // 페이지 크기 검증
+        assertThat(result.getPageable().getOffset()).isEqualTo(9); // 오프셋 검증
+        assertThat(result.getPageable().getPageNumber()).isEqualTo(3); // 현재 페이지 번호 검증
+        assertThat(result.getTotalPages()).isEqualTo(4); // 전체 페이지 수 검증
+        assertThat(result.getContent().size()).isEqualTo(1); // 현재 페이지 데이터 개수 검증
+    }
 }
