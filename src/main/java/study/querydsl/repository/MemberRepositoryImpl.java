@@ -1,13 +1,17 @@
 package study.querydsl.repository;
 
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.util.StringUtils;
 import study.querydsl.dto.MemberSearchCondition;
@@ -123,6 +127,53 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 );
 
 //        return new PageImpl<>(content, pageable, total);
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    @Override
+    public Page<MemberTeamDto> searchComplexSort(MemberSearchCondition condition, Pageable pageable) {
+
+        JPAQuery<MemberTeamDto> query = queryFactory
+                .select(new QMemberTeamDto(
+                        member.id,
+                        member.username,
+                        member.age,
+                        team.id,
+                        team.name))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(
+                        usernameEq(condition.getUsername()),
+                        teamNameEq(condition.getTeamName()),
+                        ageGoe(condition.getAgeGoe()),
+                        ageLoe(condition.getAgeLoe())
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize());
+
+        // 동적 정렬 조건 추가
+        for (Sort.Order order : pageable.getSort()) {
+            PathBuilder pathBuilder = new PathBuilder(member.getType(), member.getMetadata());
+            query.orderBy(new OrderSpecifier(
+                    order.isAscending() ? Order.ASC : Order.DESC,
+                    pathBuilder.get(order.getProperty())
+            ));
+        }
+
+        // 페이징 결과 조회
+        List<MemberTeamDto> content = query.fetch();
+
+        JPAQuery<Long> countQuery = queryFactory
+                .select(member.count())
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(
+                        usernameEq(condition.getUsername()),
+                        teamNameEq(condition.getTeamName()),
+                        ageGoe(condition.getAgeGoe()),
+                        ageLoe(condition.getAgeLoe())
+                );
+
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 

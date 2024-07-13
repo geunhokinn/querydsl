@@ -11,4 +11,5 @@ public interface MemberRepositoryCustom {
     List<MemberTeamDto> search(MemberSearchCondition condition);
     Page<MemberTeamDto> searchSimple(MemberSearchCondition condition, Pageable pageable);
     Page<MemberTeamDto> searchComplex(MemberSearchCondition condition, Pageable pageable);
+    Page<MemberTeamDto> searchComplexSort(MemberSearchCondition condition, Pageable pageable);
 }
