@@ -8,10 +8,7 @@ import com.querydsl.core.types.dsl.PathBuilder;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.util.StringUtils;
 import study.querydsl.dto.MemberSearchCondition;
@@ -175,6 +172,55 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    @Override
+    public Slice<MemberTeamDto> searchComplexSortSlice(MemberSearchCondition condition, Pageable pageable) {
+
+        JPAQuery<MemberTeamDto> query = queryFactory
+                .select(new QMemberTeamDto(
+                        member.id,
+                        member.username,
+                        member.age,
+                        team.id,
+                        team.name))
+                .from(member)
+                .leftJoin(member.team, team)
+                .where(
+                        usernameEq(condition.getUsername()),
+                        teamNameEq(condition.getTeamName()),
+                        ageGoe(condition.getAgeGoe()),
+                        ageLoe(condition.getAgeLoe())
+                )
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize() + 1); // 데이터를 한 개 더 가져오기
+
+        //  sort 가 username 으로 들어오면 자동으로 내림차순 정렬
+        Sort.Order order = !pageable.getSort().isEmpty() ? pageable.getSort().iterator().next() : null;
+        if (order != null && "username".equals(order.getProperty())) {
+            PathBuilder pathBuilder = new PathBuilder(member.getType(), member.getMetadata());
+            query.orderBy(new OrderSpecifier(Order.DESC, pathBuilder.get(order.getProperty())));
+        }
+
+//        // 동적 정렬 조건 추가
+//        for (Sort.Order order : pageable.getSort()) {
+//            PathBuilder pathBuilder = new PathBuilder(member.getType(), member.getMetadata());
+//            query.orderBy(new OrderSpecifier(
+//                    order.isAscending() ? Order.ASC : Order.DESC,
+//                    pathBuilder.get(order.getProperty())
+//            ));
+//        }
+
+        // 페이징 결과 조회
+        List<MemberTeamDto> content = query.fetch();
+
+        boolean hasNext = false;
+        if (content.size() > pageable.getPageSize()) {
+            content.remove(pageable.getPageSize());
+            hasNext = true;
+        }
+
+        return new SliceImpl<>(content, pageable, hasNext);
     }
 
     private BooleanExpression usernameEq(String username) {
